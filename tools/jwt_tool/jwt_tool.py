@@ -508,7 +508,7 @@ def signingToken(newheadDict, newpaylDict):
         if args.password:
             key = config['argvals']['key']
         elif args.keyfile:
-            key = open(config['argvals']['keyFile']).read()
+            key = open(config['argvals']['keyFile'], 'rb').read().decode('utf-8')
         newSig, newContents = signTokenHS(newheadDict, newpaylDict, key, int(config['argvals']['sigType'][2:]))
         desc = "Tampered token - HMAC Signing:"
         jwtOut(newContents+"."+newSig, "Manual Tamper - HMAC Signing", desc)

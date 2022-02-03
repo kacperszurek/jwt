@@ -80,8 +80,8 @@ padded1 = PKCS1_v1_5.EMSA_PKCS1_V1_5_ENCODE(sha256_1, len(jwt0_sig_bytes))
 m0 = bytes2mpz(padded0) 
 m1 = bytes2mpz(padded1)
 
-pkcs1 = asn1tools.compile_files('pkcs1.asn', codec='der')
-x509 = asn1tools.compile_files('x509.asn', codec='der')
+pkcs1 = asn1tools.compile_files('/szkolenie/tools/rsa_sign2n/pkcs1.asn', codec='der')
+x509 = asn1tools.compile_files('/szkolenie/tools/rsa_sign2n/x509.asn', codec='der')
 
 jwts=[]
 
