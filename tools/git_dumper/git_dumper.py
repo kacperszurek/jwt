@@ -230,13 +230,14 @@ class DownloadWorker(Worker):
         )
 
     def do_task(self, filepath, url, directory, retry, timeout, http_headers):
+        filepath_no_dot = filepath.replace(".git", "git")
         if os.path.isfile(os.path.join(directory, filepath)):
             printf("[-] Already downloaded %s/%s\n", url, filepath)
             return []
 
         with closing(
             self.session.get(
-                "%s/%s" % (url, filepath),
+                "%s/%s" % (url, filepath_no_dot),
                 allow_redirects=False,
                 stream=True,
                 timeout=timeout,
@@ -245,13 +246,13 @@ class DownloadWorker(Worker):
             printf(
                 "[-] Fetching %s/%s [%d]\n",
                 url,
-                filepath,
+                filepath_no_dot,
                 response.status_code,
             )
 
             valid, error_message = verify_response(response)
             if not valid:
-                printf(error_message, url, filepath, file=sys.stderr)
+                printf(error_message, url, filepath_no_dot, file=sys.stderr)
                 return []
 
             abspath = os.path.abspath(os.path.join(directory, filepath))
@@ -269,13 +270,14 @@ class RecursiveDownloadWorker(DownloadWorker):
     """ Download a directory recursively """
 
     def do_task(self, filepath, url, directory, retry, timeout, http_headers):
+        filepath_no_dot = filepath.replace(".git", "git")
         if os.path.isfile(os.path.join(directory, filepath)):
             printf("[-] Already downloaded %s/%s\n", url, filepath)
             return []
 
         with closing(
             self.session.get(
-                "%s/%s" % (url, filepath),
+                "%s/%s" % (url, filepath_no_dot),
                 allow_redirects=False,
                 stream=True,
                 timeout=timeout,
@@ -284,7 +286,7 @@ class RecursiveDownloadWorker(DownloadWorker):
             printf(
                 "[-] Fetching %s/%s [%d]\n",
                 url,
-                filepath,
+                filepath_no_dot,
                 response.status_code,
             )
 
@@ -305,7 +307,7 @@ class RecursiveDownloadWorker(DownloadWorker):
             else:  # file
                 valid, error_message = verify_response(response)
                 if not valid:
-                    printf(error_message, url, filepath, file=sys.stderr)
+                    printf(error_message, url, filepath_no_dot, file=sys.stderr)
                     return []
 
                 abspath = os.path.abspath(os.path.join(directory, filepath))
@@ -323,16 +325,17 @@ class FindRefsWorker(DownloadWorker):
     """ Find refs/ """
 
     def do_task(self, filepath, url, directory, retry, timeout, http_headers):
+        filepath_no_dot = filepath.replace(".git", "git")
         response = self.session.get(
-            "%s/%s" % (url, filepath), allow_redirects=False, timeout=timeout
+            "%s/%s" % (url, filepath_no_dot), allow_redirects=False, timeout=timeout
         )
         printf(
-            "[-] Fetching %s/%s [%d]\n", url, filepath, response.status_code
+            "[-] Fetching %s/%s [%d]\n", url, filepath_no_dot, response.status_code
         )
 
         valid, error_message = verify_response(response)
         if not valid:
-            printf(error_message, url, filepath, file=sys.stderr)
+            printf(error_message, url, filepath_no_dot, file=sys.stderr)
             return []
 
         abspath = os.path.abspath(os.path.join(directory, filepath))
@@ -361,25 +364,26 @@ class FindObjectsWorker(DownloadWorker):
 
     def do_task(self, obj, url, directory, retry, timeout, http_headers):
         filepath = ".git/objects/%s/%s" % (obj[:2], obj[2:])
+        filepath_no_dot = filepath.replace(".git", "git")
 
         if os.path.isfile(os.path.join(directory, filepath)):
             printf("[-] Already downloaded %s/%s\n", url, filepath)
         else:
             response = self.session.get(
-                "%s/%s" % (url, filepath),
+                "%s/%s" % (url, filepath_no_dot),
                 allow_redirects=False,
                 timeout=timeout,
             )
             printf(
                 "[-] Fetching %s/%s [%d]\n",
                 url,
-                filepath,
+                filepath_no_dot,
                 response.status_code,
             )
 
             valid, error_message = verify_response(response)
             if not valid:
-                printf(error_message, url, filepath, file=sys.stderr)
+                printf(error_message, url, filepath_no_dot, file=sys.stderr)
                 return []
 
             abspath = os.path.abspath(os.path.join(directory, filepath))
@@ -416,30 +420,30 @@ def fetch_git(url, directory, jobs, retry, timeout, http_headers):
     if url.endswith("HEAD"):
         url = url[:-4]
     url = url.rstrip("/")
-    if url.endswith(".git"):
-        url = url[:-4]
+    if url.endswith("git"):
+        url = url[:-3]
     url = url.rstrip("/")
 
-    # check for /.git/HEAD
-    printf("[-] Testing %s/.git/HEAD ", url)
-    response = session.get("%s/.git/HEAD" % url, allow_redirects=False)
+    # check for /git/HEAD
+    printf("[-] Testing %s/git/HEAD ", url)
+    response = session.get("%s/git/HEAD" % url, allow_redirects=False)
     printf("[%d]\n", response.status_code)
 
     valid, error_message = verify_response(response)
     if not valid:
-        printf(error_message, url, "/.git/HEAD", file=sys.stderr)
+        printf(error_message, url, "/git/HEAD", file=sys.stderr)
         return 1
     elif not re.match(r"^(ref:.*|[0-9a-f]{40}$)", response.text.strip()):
         printf(
-            "error: %s/.git/HEAD is not a git HEAD file\n",
+            "error: %s/git/HEAD is not a git HEAD file\n",
             url,
             file=sys.stderr,
         )
         return 1
 
     # check for directory listing
-    printf("[-] Testing %s/.git/ ", url)
-    response = session.get("%s/.git/" % url, allow_redirects=False)
+    printf("[-] Testing %s/git/ ", url)
+    response = session.get("%s/git/" % url, allow_redirects=False)
     printf("[%d]\n", response.status_code)
 
     if (
